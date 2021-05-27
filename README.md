@@ -30,7 +30,7 @@ You can run the tool by setting proper options in appsettings.json.
 
 ### Installation
 
-Thre is no installation needed for this tool other than compiling, setting proper appsettings and running it. It can be be deployed however also as a Windows or a Linux service(i.e. systemd).
+Thre is no installation needed for this tool other than compiling, setting proper appsettings and running it. It can  be deployed however also as a Windows or a Linux service(i.e. systemd).
 
 ## `Slp.API`: SLP REST API
 
@@ -39,7 +39,7 @@ Thre is no installation needed for this tool other than compiling, setting prope
 Rest API implementation in C# that uses database produced by Slp.Indexer and data from BCH node.
 All APIs are compatible with obsolete SLP endpoints [Bitcoin.com REST V2](https://rest.bitcoin.com/)
 
-You can check and test running version hosted by [EligmaLabs](https://eligmalabs.com) at [BCH.API](https://slp-indexer.eligmalabs.com/swagger/index.html).
+You can check and test running version hosted by [EligmaLabs](https://eligmalabs.com) at [slp-indexer](https://slp-indexer.eligmalabs.com/swagger/index.html).
 
 ### Configuration options
 * ConnectionStrings: SlpDbConnection - connectiong string to database produced by Slp.Indexer
