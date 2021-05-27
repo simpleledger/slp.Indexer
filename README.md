@@ -1,6 +1,6 @@
 # Slp.Indexer - Slp indexer and web api solution implemented in .NET Core using C#
 
-## `Slp.Indexer`: SLP indexer .net core console app
+## `Slp.Indexer`
 
 This is a .NET Core [SLP](https://slp.dev/) fast indexer implementation written in C#. 
 
@@ -14,7 +14,7 @@ Database schema is designed so it uses as little data as possible. Currently SLP
 
 ### Limitations and Issues
 
-Current version relies heavily on RAM as it parses all transactions in RAM so SLP validations are very fast. Since database schema is very compact this can be easily managed by adding more RAM if network will grow. Currently no pruning is implemented so there is also room for RAM usage optimization there.
+Current version relies heavily on RAM as it reads all transactions in RAM so SLP validations are very fast. Since database schema is very compact this can be easily managed by adding more RAM as database size will grow. Currently no pruning is implemented so there is also room for RAM usage optimization there.
 
 ### Configuration options
 
@@ -32,7 +32,7 @@ You can run the tool by setting proper options in appsettings.json.
 
 Thre is no installation needed for this tool other than compiling, setting proper appsettings and running it. It can  be deployed however also as a Windows or a Linux service(i.e. systemd).
 
-## `Slp.API`: SLP REST API
+## `Slp.API`
 
 .NET core web api project that implements different APIs that provide SLP information.
 
@@ -48,7 +48,4 @@ You can check and test running version hosted by [EligmaLabs](https://eligmalabs
 
 ### Installation
 This web application it can be easily deployed to any .NET core hosting provider that has access to Slp.Indexer database and Bch node via RPC.
-
-### Limitations and Issues
-Currently only SLP APIs are supported.
 
