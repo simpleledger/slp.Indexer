@@ -1,0 +1,7 @@
+/.vs
+/*/bin
+/*/obj
+/*/*.user
+/*/appsettings.Development.json
+/*/.vs
+/Slp.Indexer/Logs

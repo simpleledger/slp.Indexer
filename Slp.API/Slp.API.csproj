@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <UserSecretsId>cde06645-38a9-463e-a668-5526caba521b</UserSecretsId>
+    <Version>0.9.1</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Views\**" />
+    <Content Remove="Views\**" />
+    <EmbeddedResource Remove="Views\**" />
+    <None Remove="Views\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCoreRateLimit" Version="3.2.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Slp.Common\Slp.Common.csproj" />
+  </ItemGroup>
+
+</Project>
