@@ -5,3 +5,6 @@
 /*/appsettings.Development.json
 /*/.vs
 /Slp.Indexer/Logs
+/Slp.API/Properties/PublishProfiles/*.pubxml
+/Slp.API/Properties/PublishProfiles/*.user
+/Slp.API/Properties/ServiceDependencies/*

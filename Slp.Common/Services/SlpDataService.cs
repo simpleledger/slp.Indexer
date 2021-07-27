@@ -307,14 +307,14 @@ namespace Slp.Common.Services
         static ValidationResult GetValidationResult(SlpTransaction slpTx)
         {
             if (slpTx == null)
-                return new ValidationResult { TxId = slpTx.Hash.ToHex(), Valid = false, Reason = "Not a slp transaction" };
+                return new ValidationResult { TxId = null, Valid = false, Reason = "Not a SLP transaction." };
             if (slpTx.State == Slp.Common.Models.DbModels.SlpTransaction.TransactionState.SLP_VALID)
                 return new ValidationResult { TxId = slpTx.Hash.ToHex(), Valid = true, Reason = "Valid SLP transaction." };
             if (slpTx.State == Slp.Common.Models.DbModels.SlpTransaction.TransactionState.SLP_INVALID)
                 return new ValidationResult { TxId = slpTx.Hash.ToHex(), Valid = false, Reason = slpTx.InvalidReason };
             if (slpTx.State == Slp.Common.Models.DbModels.SlpTransaction.TransactionState.SLP_UNKNOWN)
                 return new ValidationResult { TxId = slpTx.Hash.ToHex(), Valid = false, Reason = "Not yet determined. Validation not yet finished." };
-            return new ValidationResult { TxId = slpTx.Hash.ToHex(), Valid = false, Reason = "Unknown reason. Should not happen!" };
+            return new ValidationResult { TxId = slpTx.Hash.ToHex(), Valid = false, Reason = "Unknown reason." };
         }
 
         public async Task<ValidationResult> ValidateTransactionAsync(string txId)
