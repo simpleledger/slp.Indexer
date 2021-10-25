@@ -7,7 +7,7 @@ namespace Slp.Common.Models
 {
     public class ValidationResult
     {
-        public string TxId { get; set; }
+        public string txid { get; set; }
         public bool Valid { get; set; }
         public string Reason { get; set; }
     }

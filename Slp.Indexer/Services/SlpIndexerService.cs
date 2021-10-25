@@ -249,6 +249,7 @@ namespace Slp.Indexer.Services
 
         public async Task ProcessQueue()
         {
+            _log.LogInformation("ZMQ processing enabled: " + _zmqProcessingEnabled);
             while (true)
             {
                 _listenHeartBeatCounter++;

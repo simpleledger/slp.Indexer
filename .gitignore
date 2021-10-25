@@ -8,3 +8,6 @@
 /Slp.API/Properties/PublishProfiles/*.pubxml
 /Slp.API/Properties/PublishProfiles/*.user
 /Slp.API/Properties/ServiceDependencies/*
+/Slp.Indexer/Properties/PublishProfiles/*.pubxml
+/Slp.Indexer/Properties/PublishProfiles/*.pubxml.user
+/Slp.API/.config/dotnet-tools.json

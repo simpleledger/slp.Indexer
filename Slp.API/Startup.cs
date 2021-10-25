@@ -46,6 +46,7 @@ namespace Slp.API
             services.AddControllersWithViews();
             services.AddSwaggerGen(c =>
             {
+                c.EnableAnnotations();
                 c.SwaggerDoc("v2", new OpenApiInfo { Title = "Slp.API", Version = "v2" });
             });
             var connectionString = Configuration.GetConnectionString("SlpDbConnection");
