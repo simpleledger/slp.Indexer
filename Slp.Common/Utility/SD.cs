@@ -25,7 +25,7 @@ namespace Slp.Common.Utility
         public const int TimeConsumingQueryTimeoutSeconds = 120; // Application settings defaut values - also serves to replace magic strings in code
         // From which block slp block fetching should start 
         public const int StartFromBlock = 0;
-        
+
         public const string BchNodeType = "Mainnet";
         public const string BchNodeUser = "bitcoin";
         public const string BchNodePassword = "password";
@@ -36,5 +36,8 @@ namespace Slp.Common.Utility
         public const int RpcBlockPrefetchLimit = 500; //meaning maximum of 500 block will be prefetched using different workers
         public const string NotificationWebhookUrl = "";
         public const int DbCommitBatchSize = 100; //commit to database every 100 transactions
+
+        public enum DatabaseBackendType { POSTGRESQL, MSSQL};
+        public const DatabaseBackendType DatabaseBackend = DatabaseBackendType.POSTGRESQL;
     }
 }

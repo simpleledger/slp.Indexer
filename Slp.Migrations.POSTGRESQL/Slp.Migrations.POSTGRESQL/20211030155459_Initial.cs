@@ -1,33 +1,20 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Slp.Common.Migrations
+namespace Slp.Migrations.POSTGRESQL.Slp.Migrations.POSTGRESQL
 {
     public partial class Initial : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "SlpAddress",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SlpAddress", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "SlpBlock",
                 columns: table => new
                 {
-                    Height = table.Column<int>(type: "int", nullable: false),
-                    Hash = table.Column<byte[]>(type: "varbinary(32)", maxLength: 32, nullable: true),
-                    BlockTime = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsSlp = table.Column<byte>(type: "tinyint", nullable: false),
-                    Orphaned = table.Column<bool>(type: "bit", nullable: true)
+                    Height = table.Column<int>(type: "integer", nullable: false),
+                    Hash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true),
+                    BlockTime = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    IsSlp = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -38,10 +25,10 @@ namespace Slp.Common.Migrations
                 name: "SlpDatabaseState",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false),
-                    LastStatusUpdate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    BlockTip = table.Column<int>(type: "int", nullable: false),
-                    BlockTipHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false),
+                    LastStatusUpdate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    BlockTip = table.Column<int>(type: "integer", nullable: false),
+                    BlockTipHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -49,32 +36,58 @@ namespace Slp.Common.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SlpAddress",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false),
+                    BlockHeight = table.Column<int>(type: "integer", maxLength: 128, nullable: true),
+                    Address = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SlpAddress", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SlpAddress_SlpBlock_BlockHeight",
+                        column: x => x.BlockHeight,
+                        principalTable: "SlpBlock",
+                        principalColumn: "Height",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SlpToken",
                 columns: table => new
                 {
-                    Hash = table.Column<byte[]>(type: "varbinary(32)", maxLength: 32, nullable: false),
-                    VersionType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    Symbol = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    DocumentUri = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    DocumentSha256Hex = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    Decimals = table.Column<int>(type: "int", nullable: false),
-                    LastActiveSend = table.Column<int>(type: "int", nullable: true),
-                    ActiveMint = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    TotalMinted = table.Column<decimal>(type: "decimal (38,0)", nullable: true),
-                    TotalBurned = table.Column<decimal>(type: "decimal (38,0)", nullable: true),
-                    CirculatingSupply = table.Column<decimal>(type: "decimal (38,0)", nullable: true),
-                    ValidTokenUtxos = table.Column<int>(type: "int", nullable: true),
-                    ValidAddresses = table.Column<int>(type: "int", nullable: true),
-                    SatoshisLockedUp = table.Column<int>(type: "int", nullable: true),
-                    TxnsSinceGenesis = table.Column<int>(type: "int", nullable: true),
-                    MintingBatonStatus = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    BlockLastActiveSend = table.Column<int>(type: "int", nullable: true),
-                    BlockLastActiveMint = table.Column<int>(type: "int", nullable: true)
+                    Hash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: false),
+                    BlockHeight = table.Column<int>(type: "integer", nullable: true),
+                    VersionType = table.Column<int>(type: "integer", nullable: false),
+                    Name = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Symbol = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    DocumentUri = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    DocumentSha256Hex = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Decimals = table.Column<int>(type: "integer", nullable: false),
+                    LastActiveSend = table.Column<int>(type: "integer", nullable: true),
+                    ActiveMint = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    TotalMinted = table.Column<decimal>(type: "numeric(38,0)", nullable: true),
+                    TotalBurned = table.Column<decimal>(type: "numeric(38,0)", nullable: true),
+                    CirculatingSupply = table.Column<decimal>(type: "numeric(38,0)", nullable: true),
+                    ValidTokenUtxos = table.Column<int>(type: "integer", nullable: true),
+                    ValidAddresses = table.Column<int>(type: "integer", nullable: true),
+                    SatoshisLockedUp = table.Column<int>(type: "integer", nullable: true),
+                    TxnsSinceGenesis = table.Column<int>(type: "integer", nullable: true),
+                    MintingBatonStatus = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    BlockLastActiveSend = table.Column<int>(type: "integer", nullable: true),
+                    BlockLastActiveMint = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SlpToken", x => x.Hash);
+                    table.ForeignKey(
+                        name: "FK_SlpToken_SlpBlock_BlockHeight",
+                        column: x => x.BlockHeight,
+                        principalTable: "SlpBlock",
+                        principalColumn: "Height",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -82,17 +95,17 @@ namespace Slp.Common.Migrations
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false),
-                    Hash = table.Column<byte[]>(type: "varbinary(32)", maxLength: 32, nullable: true),
-                    SlpTokenId = table.Column<byte[]>(type: "varbinary(32)", maxLength: 32, nullable: true),
-                    SlpTokenType = table.Column<int>(type: "int", nullable: false),
-                    Type = table.Column<int>(type: "int", nullable: false),
-                    BlockHeight = table.Column<int>(type: "int", nullable: true),
-                    State = table.Column<int>(type: "int", nullable: false),
-                    InvalidReason = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: true),
-                    MintBatonVOut = table.Column<int>(type: "int", nullable: true),
-                    AdditionalTokenQuantity = table.Column<decimal>(type: "decimal (38,0)", nullable: true),
-                    TokenInputSum = table.Column<decimal>(type: "decimal (38,0)", nullable: true),
-                    TokenOutputSum = table.Column<decimal>(type: "decimal (38,0)", nullable: true)
+                    Hash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true),
+                    SlpTokenId = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true),
+                    SlpTokenType = table.Column<int>(type: "integer", nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    BlockHeight = table.Column<int>(type: "integer", nullable: true),
+                    State = table.Column<int>(type: "integer", nullable: false),
+                    InvalidReason = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    MintBatonVOut = table.Column<int>(type: "integer", nullable: true),
+                    AdditionalTokenQuantity = table.Column<decimal>(type: "numeric(38,0)", nullable: true),
+                    TokenInputSum = table.Column<decimal>(type: "numeric(38,0)", nullable: true),
+                    TokenOutputSum = table.Column<decimal>(type: "numeric(38,0)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -117,11 +130,11 @@ namespace Slp.Common.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false),
                     SlpTransactionId = table.Column<long>(type: "bigint", nullable: false),
-                    AddressId = table.Column<int>(type: "int", nullable: false),
-                    SlpAmount = table.Column<decimal>(type: "decimal (38,0)", nullable: false),
-                    BlockchainSatoshis = table.Column<decimal>(type: "decimal (38,0)", nullable: false),
-                    SourceTxHash = table.Column<byte[]>(type: "varbinary(32)", maxLength: 32, nullable: true),
-                    VOut = table.Column<int>(type: "int", nullable: false)
+                    AddressId = table.Column<int>(type: "integer", nullable: true),
+                    SlpAmount = table.Column<decimal>(type: "numeric(38,0)", nullable: false),
+                    BlockchainSatoshis = table.Column<decimal>(type: "numeric(38,0)", nullable: false),
+                    SourceTxHash = table.Column<byte[]>(type: "bytea", maxLength: 32, nullable: true),
+                    VOut = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -131,7 +144,7 @@ namespace Slp.Common.Migrations
                         column: x => x.AddressId,
                         principalTable: "SlpAddress",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_SlpTransactionInput_SlpTransaction_SlpTransactionId",
                         column: x => x.SlpTransactionId,
@@ -145,10 +158,10 @@ namespace Slp.Common.Migrations
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false),
-                    AddressId = table.Column<int>(type: "int", maxLength: 128, nullable: false),
-                    VOut = table.Column<int>(type: "int", nullable: false),
-                    Amount = table.Column<decimal>(type: "decimal (38,0)", nullable: false),
-                    BlockchainSatoshis = table.Column<decimal>(type: "decimal (38,0)", nullable: false),
+                    AddressId = table.Column<int>(type: "integer", maxLength: 128, nullable: false),
+                    VOut = table.Column<int>(type: "integer", nullable: false),
+                    Amount = table.Column<decimal>(type: "numeric(38,0)", nullable: false),
+                    BlockchainSatoshis = table.Column<decimal>(type: "numeric(38,0)", nullable: false),
                     NextInputId = table.Column<long>(type: "bigint", nullable: true),
                     SlpTransactionId = table.Column<long>(type: "bigint", nullable: false)
                 },
@@ -179,13 +192,22 @@ namespace Slp.Common.Migrations
                 name: "IX_SlpAddress_Address",
                 table: "SlpAddress",
                 column: "Address",
-                unique: true,
-                filter: "[Address] IS NOT NULL");
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SlpAddress_BlockHeight",
+                table: "SlpAddress",
+                column: "BlockHeight");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SlpBlock_Hash",
                 table: "SlpBlock",
                 column: "Hash");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SlpToken_BlockHeight",
+                table: "SlpToken",
+                column: "BlockHeight");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SlpTransaction_BlockHeight",
@@ -246,10 +268,10 @@ namespace Slp.Common.Migrations
                 name: "SlpTransaction");
 
             migrationBuilder.DropTable(
-                name: "SlpBlock");
+                name: "SlpToken");
 
             migrationBuilder.DropTable(
-                name: "SlpToken");
+                name: "SlpBlock");
         }
     }
 }

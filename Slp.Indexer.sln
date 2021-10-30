@@ -9,6 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Slp.Common", "Slp.Common\Sl
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Slp.Indexer", "Slp.Indexer\Slp.Indexer.csproj", "{533B489B-624B-4FA4-ACCA-95886FDD7132}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Slp.Migrations.MSSQL", "Slp.Migrations.MSSQL\Slp.Migrations.MSSQL.csproj", "{BFC726B4-8394-4838-9134-B0C7BB579B1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Slp.Migrations.POSTGRESQL", "Slp.Migrations.POSTGRESQL\Slp.Migrations.POSTGRESQL.csproj", "{FB3448CC-6D6F-4A8C-BD46-512712E08CA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{533B489B-624B-4FA4-ACCA-95886FDD7132}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{533B489B-624B-4FA4-ACCA-95886FDD7132}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{533B489B-624B-4FA4-ACCA-95886FDD7132}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFC726B4-8394-4838-9134-B0C7BB579B1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFC726B4-8394-4838-9134-B0C7BB579B1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFC726B4-8394-4838-9134-B0C7BB579B1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFC726B4-8394-4838-9134-B0C7BB579B1B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB3448CC-6D6F-4A8C-BD46-512712E08CA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB3448CC-6D6F-4A8C-BD46-512712E08CA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB3448CC-6D6F-4A8C-BD46-512712E08CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB3448CC-6D6F-4A8C-BD46-512712E08CA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

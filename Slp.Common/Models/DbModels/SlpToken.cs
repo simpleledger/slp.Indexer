@@ -17,6 +17,11 @@ namespace Slp.Common.Models.DbModels
         //public string Hex { get; set; }
         [MaxLength(SD.HashSize)]
         public byte[] Hash { get; set; }
+
+        [ForeignKey(nameof(Block))]
+        public int? BlockHeight { get; set; }
+        public SlpBlock Block { get; set; }
+
         public SlpVersionType VersionType { get; set; }
         [MaxLength(SD.MessageSize)]
         public string Name { get; set; }
@@ -47,5 +52,7 @@ namespace Slp.Common.Models.DbModels
         public string MintingBatonStatus { get; set; }
         public int? BlockLastActiveSend { get; set; }
         public int? BlockLastActiveMint { get; set; }
+
+
     }
 }

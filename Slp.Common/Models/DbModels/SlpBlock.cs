@@ -13,9 +13,8 @@ namespace Slp.Common.Models.DbModels
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int Height { get; set; }
         [MaxLength(SD.HashSize)]
-        public byte[] Hash { get; set; }
+        public byte[] Hash { get; set; }        
         public DateTime BlockTime { get; set; }        
-        public byte IsSlp { get; set; }
-        public bool? Orphaned { get; set; }
+        public bool IsSlp { get; set; }
     }    
 }

@@ -9,6 +9,9 @@ namespace Slp.Common.Models.DbModels
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int Id { get; set; }
         [MaxLength(SD.AddressSize)]
+        [ForeignKey(nameof(Block))]
+        public int? BlockHeight { get; set; }
+        public SlpBlock Block { get; set; }
         public string Address { get; set; }
 
         public override bool Equals(object obj)

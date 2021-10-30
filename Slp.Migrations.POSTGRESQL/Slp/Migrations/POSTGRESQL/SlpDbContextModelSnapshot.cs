@@ -2,11 +2,11 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Slp.Common.DataAccess;
 
-namespace Slp.Common.Migrations
+namespace Slp.Migrations.POSTGRESQL.Slp.Migrations.POSTGRESQL
 {
     [DbContext(typeof(SlpDbContext))]
     partial class SlpDbContextModelSnapshot : ModelSnapshot
@@ -15,24 +15,24 @@ namespace Slp.Common.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("Relational:MaxIdentifierLength", 128)
-                .HasAnnotation("ProductVersion", "5.0.6")
-                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63)
+                .HasAnnotation("ProductVersion", "5.0.11")
+                .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
             modelBuilder.Entity("Slp.Common.Models.DbModels.DatabaseState", b =>
                 {
                     b.Property<int>("Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("BlockTip")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("BlockTipHash")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime?>("LastStatusUpdate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -42,17 +42,21 @@ namespace Slp.Common.Migrations
             modelBuilder.Entity("Slp.Common.Models.DbModels.SlpAddress", b =>
                 {
                     b.Property<int>("Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("BlockHeight")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Address")
-                        .IsUnique()
-                        .HasFilter("[Address] IS NOT NULL");
+                        .IsUnique();
+
+                    b.HasIndex("BlockHeight");
 
                     b.ToTable("SlpAddress");
                 });
@@ -60,20 +64,17 @@ namespace Slp.Common.Migrations
             modelBuilder.Entity("Slp.Common.Models.DbModels.SlpBlock", b =>
                 {
                     b.Property<int>("Height")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("BlockTime")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<byte[]>("Hash")
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("bytea");
 
-                    b.Property<byte>("IsSlp")
-                        .HasColumnType("tinyint");
-
-                    b.Property<bool?>("Orphaned")
-                        .HasColumnType("bit");
+                    b.Property<bool>("IsSlp")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Height");
 
@@ -86,69 +87,74 @@ namespace Slp.Common.Migrations
                 {
                     b.Property<byte[]>("Hash")
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("ActiveMint")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int?>("BlockHeight")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("BlockLastActiveMint")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("BlockLastActiveSend")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("CirculatingSupply")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<int>("Decimals")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("DocumentSha256Hex")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("DocumentUri")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<int?>("LastActiveSend")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("MintingBatonStatus")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<int?>("SatoshisLockedUp")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("Symbol")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<decimal?>("TotalBurned")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<decimal?>("TotalMinted")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<int?>("TxnsSinceGenesis")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("ValidAddresses")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int?>("ValidTokenUtxos")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("VersionType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Hash");
+
+                    b.HasIndex("BlockHeight");
 
                     b.ToTable("SlpToken");
                 });
@@ -159,40 +165,40 @@ namespace Slp.Common.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<decimal?>("AdditionalTokenQuantity")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<int?>("BlockHeight")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<byte[]>("Hash")
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("bytea");
 
                     b.Property<string>("InvalidReason")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int?>("MintBatonVOut")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<byte[]>("SlpTokenId")
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("SlpTokenType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("State")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("TokenInputSum")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<decimal?>("TokenOutputSum")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<int>("Type")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -210,24 +216,24 @@ namespace Slp.Common.Migrations
                     b.Property<long>("Id")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("AddressId")
-                        .HasColumnType("int");
+                    b.Property<int?>("AddressId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("BlockchainSatoshis")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<decimal>("SlpAmount")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<long>("SlpTransactionId")
                         .HasColumnType("bigint");
 
                     b.Property<byte[]>("SourceTxHash")
                         .HasMaxLength(32)
-                        .HasColumnType("varbinary(32)");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("VOut")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -245,13 +251,13 @@ namespace Slp.Common.Migrations
 
                     b.Property<int>("AddressId")
                         .HasMaxLength(128)
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<decimal>("BlockchainSatoshis")
-                        .HasColumnType("decimal (38,0)");
+                        .HasColumnType("numeric(38,0)");
 
                     b.Property<long?>("NextInputId")
                         .HasColumnType("bigint");
@@ -260,7 +266,7 @@ namespace Slp.Common.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<int>("VOut")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -271,6 +277,24 @@ namespace Slp.Common.Migrations
                     b.HasIndex("SlpTransactionId");
 
                     b.ToTable("SlpTransactionOutput");
+                });
+
+            modelBuilder.Entity("Slp.Common.Models.DbModels.SlpAddress", b =>
+                {
+                    b.HasOne("Slp.Common.Models.DbModels.SlpBlock", "Block")
+                        .WithMany()
+                        .HasForeignKey("BlockHeight");
+
+                    b.Navigation("Block");
+                });
+
+            modelBuilder.Entity("Slp.Common.Models.DbModels.SlpToken", b =>
+                {
+                    b.HasOne("Slp.Common.Models.DbModels.SlpBlock", "Block")
+                        .WithMany()
+                        .HasForeignKey("BlockHeight");
+
+                    b.Navigation("Block");
                 });
 
             modelBuilder.Entity("Slp.Common.Models.DbModels.SlpTransaction", b =>
@@ -292,9 +316,7 @@ namespace Slp.Common.Migrations
                 {
                     b.HasOne("Slp.Common.Models.DbModels.SlpAddress", "Address")
                         .WithMany()
-                        .HasForeignKey("AddressId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("AddressId");
 
                     b.HasOne("Slp.Common.Models.DbModels.SlpTransaction", "SlpTransaction")
                         .WithMany("SlpTransactionInputs")

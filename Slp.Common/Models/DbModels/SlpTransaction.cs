@@ -22,16 +22,31 @@ namespace Slp.Common.Models.DbModels
         [MaxLength(SD.HashSize)]
         public byte[] SlpTokenId { get; set; }
         public virtual SlpToken SlpToken { get; set; }
-        
+
+        //[Column(nameof(SlpTokenType))]
+        //public int SlpTokenTypeInt { get; set; }
+        //[NotMapped]
+        //public SlpVersionType SlpTokenType { get { return (SlpVersionType)SlpTokenTypeInt; } set { SlpTokenTypeInt = (int)value;  } }
         public SlpVersionType SlpTokenType { get; set; }
+
+        //[Column(nameof(Type))]
+        //public int TypeInt { get; set; }
+        //[NotMapped]
+        //public SlpTransactionType Type { get { return (SlpTransactionType)TypeInt; } set { TypeInt = (int)value; } }
         public SlpTransactionType Type { get; set; }
-        
+
         [ForeignKey(nameof(Block))]
         public int? BlockHeight { get; set; }
         public SlpBlock Block { get; set; }        
         //public bool Unconfirmed { get; set; }        
         public enum TransactionState { SLP_UNKNOWN=0, SLP_VALID=1, SLP_INVALID=-1 }
-        public TransactionState State { get; set; } = TransactionState.SLP_UNKNOWN;
+
+        //[Column(nameof(State))]
+        //public int StateInt { get; set; } = (int)TransactionState.SLP_UNKNOWN;
+        //[NotMapped]
+        //public TransactionState State { get { return (TransactionState)StateInt; } set { StateInt = (int)value; } }
+        public TransactionState State { get; set; }
+
         [MaxLength(SD.InvalidReasonLength)]
         public string InvalidReason { get; set; }
 

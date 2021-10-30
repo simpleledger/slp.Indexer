@@ -20,7 +20,7 @@ namespace Slp.Common.Models.DbModels
         public SlpTransaction SlpTransaction { get; set; }
 
         [ForeignKey(nameof(Address))]
-        public int AddressId { get; set; }
+        public int? AddressId { get; set; } = null;  //input can also be null for genesis txs
         public SlpAddress Address { get; set; }
 
         [Column(TypeName = SD.AnnotationLargeInteger)]

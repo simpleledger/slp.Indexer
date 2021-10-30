@@ -80,58 +80,8 @@ namespace Slp.Common.DataAccess
                 await db.Database.ExecuteSqlRawAsync(sql);
             }
         }
-        public async Task DeleteSlpTransactionsNewerThanBlockHeight(int blockHeight,ILogger log = null, int commandsTimeout = SD.TimeConsumingQueryTimeoutSeconds)
-        {
-            Database.SetCommandTimeout(commandsTimeout);
-
-            log?.LogInformation("Deleting all output nextId links that will be deleted from block height >= {0} forward", blockHeight);
-            var outputsClearLinks = SlpTransactionOutput
-                                        //.AsNoTracking()
-                                        .Include(t => t.NextInput)
-                                            .ThenInclude(t => t.SlpTransaction)
-                                        .Where(t => t.NextInputId != null && 
-                                        (!t.NextInput.SlpTransaction.BlockHeight.HasValue || t.NextInput.SlpTransaction.BlockHeight >= blockHeight))
-                                        ;
-            var updated = await outputsClearLinks.BatchUpdateAsync(a => new SlpTransactionOutput { NextInputId = null });
-
-            log?.LogInformation("Deleting all inputs >= than block height {0}", blockHeight);
-            var lastBlockTxInputs = SlpTransactionInput
-                //.AsNoTracking()
-                .Include(t => t.SlpTransaction)
-                .Where(t => !t.SlpTransaction.BlockHeight.HasValue || t.SlpTransaction.BlockHeight >= blockHeight);
-            await lastBlockTxInputs.BatchDeleteAsync();
-            
-            log?.LogInformation("Deleting all outputs >= than block height {0}", blockHeight);
-            Database.SetCommandTimeout(120);
-            var lastBlockTxOutputs = SlpTransactionOutput
-                //.AsNoTracking()
-                .Include(t => t.SlpTransaction).Where(t => !t.SlpTransaction.BlockHeight.HasValue || t.SlpTransaction.BlockHeight >= blockHeight);
-            await lastBlockTxOutputs.BatchDeleteAsync();
-
-            log?.LogInformation("Deleting all transactions >= than block height {0}", blockHeight);
-            var lastBlockTxs = SlpTransaction
-                //.AsNoTracking()
-                .Where(t => !t.BlockHeight.HasValue || t.BlockHeight >= blockHeight);
-            await lastBlockTxs.BatchDeleteAsync();
-
-            log?.LogInformation("Deleting all new blocks >= block height {0}", blockHeight);
-            var blocks = SlpBlock
-                //.AsNoTracking()
-                .Where(t => t.Height >= blockHeight);
-            await blocks.BatchDeleteAsync();
-
-            //token are never deleted - once inserted into database it can stay there since hex is key and 
-            //dangling tokens does not affect anything
-            //log?.LogInformation("Deleting all slp tokens with zero transactions {0}", blockHeight);
-            ////TODO: this bulk extensions query does not work because ORDER BY at the end - check for fixes
-            var tokens = SlpToken
-                //.AsTracking()
-                .Include(t => t.Transactions).Where(t => !t.Transactions.Any());
-            //await tokens.BatchDeleteAsync();
-            AttachRange(tokens);
-            SlpToken.RemoveRange(tokens);
-            await SaveChangesAsync();                
-        }
+       
+        
 
         //public async Task RemoveAllDataNewerThanBlockHeightAsync(int blockHeight, ILogger log = null)
         //{

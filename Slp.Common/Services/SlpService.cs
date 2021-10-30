@@ -898,30 +898,32 @@ namespace Slp.Common.Services
             }
 
             // sign inputs
-            uint i = 0;
-            foreach (var txo in config.InputUtxos) {
+            throw new NotImplementedException("Sign properly here.");
+            //uint i = 0;
+            //foreach (var txo in config.InputUtxos) {
 
-                //var bchChangeReceiverAddress = _rpcClient.Network.wif
-                //var secret = GetWif(Network.RegTest);
-                //const paymentKeyPair =  this.BITBOX.ECPair.fromWIF(txo.wif);
-                // var key = new Key() {  }
-                var res  = transactionBuilder.TrySignInput(transaction, i, SigHash.All, out TransactionSignature signature);
-                //transaction.SignInput();
-                //transactionBuilder.Sign(i, paymentKeyPair, undefined,
-                //    transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
-                i++;
-            }
+            //    //var bchChangeReceiverAddress = _rpcClient.Network.wif
+            //    //var secret = GetWif(Network.RegTest);
+            //    //const paymentKeyPair =  this.BITBOX.ECPair.fromWIF(txo.wif);
+            //    // var key = new Key() {  }
+            //    //var res  = transactionBuilder.TrySignInput(transaction, i, SigHash.All, out TransactionSignature signature);
+            //    varr res = transactionBuilder.Sign(transaction, i, SigHash.All, out TransactionSignature signature);
+            //    //transaction.SignInput();
+            //    //transactionBuilder.Sign(i, paymentKeyPair, undefined,
+            //    //    transactionBuilder.hashTypes.SIGHASH_ALL, txo.satoshis.toNumber());
+            //    i++;
+            //}
 
-            var tx = transaction.GetHash().ToString();
+            //var tx = transaction.GetHash().ToString();
 
-            // Check For Low Fee
-            //var outValue = transactionBuilder.Outputs(transaction.tx.outs.reduce((v: number, o: any) => v += o.value, 0);
-            var outValue = transaction.Outputs.Sum(o => o.Value); // (transaction.tx.outs.reduce((v: number, o: any) => v += o.value, 0);
-            var inValue = config.InputUtxos.Sum(i => i.Satoshis); // reduce((v, i) => v = v.plus(i.satoshis), new BigNumber(0));
-            if (inValue - outValue <= tx.Length / 2)
-                throw new Exception("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.");
-            // TODO: Check for fee too large or send leftover to target address
-            return tx;
+            //// Check For Low Fee
+            ////var outValue = transactionBuilder.Outputs(transaction.tx.outs.reduce((v: number, o: any) => v += o.value, 0);
+            //var outValue = transaction.Outputs.Sum(o => o.Value); // (transaction.tx.outs.reduce((v: number, o: any) => v += o.value, 0);
+            //var inValue = config.InputUtxos.Sum(i => i.Satoshis); // reduce((v, i) => v = v.plus(i.satoshis), new BigNumber(0));
+            //if (inValue - outValue <= tx.Length / 2)
+            //    throw new Exception("Transaction input BCH amount is too low.  Add more BCH inputs to fund this transaction.");
+            //// TODO: Check for fee too large or send leftover to target address
+            //return tx;
         }
 
         #region PRIVATE
@@ -1574,7 +1576,7 @@ namespace Slp.Common.Services
                 //Id = dbSlpIdManager.GetNextSlpTransactionOutputId(),
                 BlockchainSatoshis = sendReceiverOutput.Value.ToDecimal(MoneyUnit.Satoshi),
                 //Address = sendAddress,
-                Address = new SlpAddress { Address = sendAddress },
+                Address = new SlpAddress { Address = sendAddress, BlockHeight = slpTr.BlockHeight },
                 VOut = outputIndex,
                 Amount = (ulong)slpDetails.SendOutputs[outputIndex],
                 SlpTransaction = slpTr,
@@ -1583,7 +1585,7 @@ namespace Slp.Common.Services
             return sendOutput;
         }
 
-        private SlpTransactionOutput OpReturnOutput0(SlpTransaction slpTransaction)
+        private SlpTransactionOutput OpReturnOutput0(SlpTransaction slpTx)
         {
             var opReturnOutput = new SlpTransactionOutput()
             {
@@ -1591,9 +1593,9 @@ namespace Slp.Common.Services
                 BlockchainSatoshis = 0,
                 VOut = 0,
                 //Address = SD.UnparsedAddress,
-                Address = new SlpAddress { Address = SD.UnparsedAddress },
+                Address = new SlpAddress { Address = SD.UnparsedAddress, BlockHeight = slpTx.BlockHeight },
                 Amount = 0,
-                SlpTransaction = slpTransaction,
+                SlpTransaction = slpTx
                 //SlpTransactionHex = slpTransaction.Hex
             };
             return opReturnOutput;
@@ -1611,7 +1613,7 @@ namespace Slp.Common.Services
                 // Id = dbSlpIdManager.GetNextSlpTransactionOutputId(),
                 BlockchainSatoshis = initialMintReciverOutput.Value.ToDecimal(NBitcoin.MoneyUnit.Satoshi),
                 //Address = new Address{outputAddress,
-                Address = new SlpAddress { Address=outputAddress},
+                Address = new SlpAddress { Address=outputAddress, BlockHeight = slpTr.BlockHeight },
                 VOut = outputIndex1,
                 Amount = slpDetails.GenesisOrMintQuantity.Value,
                 SlpTransaction = slpTr,
@@ -1635,8 +1637,8 @@ namespace Slp.Common.Services
             {
                 // Id = dbSlpIdManager.GetNextSlpTransactionOutputId(),
                 BlockchainSatoshis = mintOutput.Value.ToDecimal(NBitcoin.MoneyUnit.Satoshi),
-                //Address = mintBatonaddress,
-                Address = new SlpAddress { Address=mintBatonaddress},
+                //Address = mintBatonaddress,,
+                Address = new SlpAddress { Address=mintBatonaddress, BlockHeight = slpTr.BlockHeight },
                 VOut = outputIndex,
                 Amount = 0, //baton receiver recieves 0 tokens and can produce another token in the subsequent tx
                 SlpTransaction = slpTr,
@@ -1664,7 +1666,7 @@ namespace Slp.Common.Services
             {
                 BlockchainSatoshis = tr.Outputs.ElementAt(outputIndex).Value.ToDecimal(NBitcoin.MoneyUnit.Satoshi),
                 //Address = bchAddr.ToString(),
-                Address = new SlpAddress { Address = bchAddr.ToString()},
+                Address = new SlpAddress { Address = bchAddr.ToString(), BlockHeight = slpTr.BlockHeight },
                 VOut = outputIndex,
                 Amount = 0,
                 SlpTransaction = slpTr,
