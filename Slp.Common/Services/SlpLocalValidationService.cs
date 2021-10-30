@@ -342,6 +342,8 @@ namespace Slp.Common.Services
                             var outputIndex = slpTx.SlpTransactionInputs.ElementAt(i).VOut;
                             if (outputIndex == 1)
                             {
+                                if (!inputSlpTransaction.AdditionalTokenQuantity.HasValue)
+                                    throw new Exception("Mint or genesis transaction must have token quantity set.");
                                 tokenInQty += inputSlpTransaction.AdditionalTokenQuantity.Value;
                                 var trHex = slpTx.SlpTransactionInputs.ElementAt(i).SourceTxHash.ToHex();
                                 var vout = slpTx.SlpTransactionInputs.ElementAt(i).VOut;

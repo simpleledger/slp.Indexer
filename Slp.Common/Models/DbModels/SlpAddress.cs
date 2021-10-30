@@ -14,6 +14,9 @@ namespace Slp.Common.Models.DbModels
         public SlpBlock Block { get; set; }
         public string Address { get; set; }
 
+        [NotMapped]
+        public bool InDatabase { get; set; }
+
         public override bool Equals(object obj)
         {
             if( obj == null)

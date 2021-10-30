@@ -36,7 +36,7 @@ namespace Slp.Indexer.Services
         SD.DatabaseBackendType _databaseBackendType;
         //private readonly IBchRestClient _restClient;
 
-        ConcurrentDictionary<string, (SlpAddress,bool)> _usedAddresses = new ConcurrentDictionary<string, (SlpAddress, bool)>();
+        ConcurrentDictionary<string, SlpAddress> _usedAddresses = new ConcurrentDictionary<string, SlpAddress>();
         ConcurrentDictionary<string, SlpToken> _tokenMap = new ConcurrentDictionary<string, SlpToken>();
         ConcurrentDictionary<string, SlpTransaction> _slpTrCache = new ConcurrentDictionary<string, SlpTransaction>();
         //ConcurrentBag<string> _notSlpTxCache = new ConcurrentBag<string>();
@@ -86,6 +86,7 @@ namespace Slp.Indexer.Services
             .MapInteger(nameof(SlpTransaction.BlockHeight), x => x.BlockHeight)
             .MapVarchar(nameof(SlpTransaction.InvalidReason), x => x.InvalidReason)
             .MapInteger(nameof(SlpTransaction.MintBatonVOut), x => x.MintBatonVOut)
+            .MapNumeric(nameof(SlpTransaction.AdditionalTokenQuantity), x => x.AdditionalTokenQuantity)
             .MapInteger(nameof(SlpTransaction.SlpTokenType), x => (int)x.SlpTokenType)
             .MapNumeric(nameof(SlpTransaction.TokenInputSum), x => x.TokenInputSum)
             .MapNumeric(nameof(SlpTransaction.TokenOutputSum), x => x.TokenOutputSum)
@@ -146,19 +147,22 @@ namespace Slp.Indexer.Services
             _databaseBackendType = configuration.GetValue(nameof(SD.DatabaseBackend), SD.DatabaseBackend);           
         }
 
+        SlpAddress GetAddress(string address)
+        {
+            if (!_usedAddresses.TryGetValue(address, out var addr))
+                return addr;
+            return null;
+        }
         SlpAddress GetOrCreateAddress(string address,int? blockHeight)
         {
             //using var db = new SlpDbContext(_dbOptions);
             if (!_usedAddresses.TryGetValue(address, out var addr))
             {
-                var nextId = _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Item1.Id) + 1 : 1;
-                addr.Item1 = new SlpAddress { Id = nextId, Address = address, BlockHeight = blockHeight };
-                addr.Item2 = false;
-                //db.SlpAddress.Add();
-                //db.SaveChanges();
+                var nextId = _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Id) + 1 : 1;
+                addr = new SlpAddress { Id = nextId, Address = address, BlockHeight = blockHeight, InDatabase = false };
                 _usedAddresses.TryAdd(address, addr);
             }
-            return addr.Item1;
+            return addr;
         }
 
         private Task<SlpTransaction> TransactionProviderForSlpValidatorAsync(string txId)
@@ -210,54 +214,27 @@ namespace Slp.Indexer.Services
                 //inputs.AddRange(tr.SlpTransactionInputs);               
                 foreach (var o in tr.SlpTransactionOutputs)
                 {
-                    outputs.Add(o);
-
-                    var a = o.Address;
-                    a.BlockHeight = a.BlockHeight;
-                    if (!_usedAddresses.TryGetValue(a.Address, out var addr))
+                    try
                     {
-                        a.Id = _usedAddresses.Count;
-                        o.AddressId = a.Id;
-                        addr = (a, true);
-                        _usedAddresses.TryAdd(a.Address, addr);
-                        o.Address.BlockHeight = tr.BlockHeight;
-                        newAddresses.Add(addr.Item1.Address, addr.Item1);
+                        outputs.Add(o);                        
+                        var addr = GetOrCreateAddress(o.Address.Address, tr.BlockHeight);
+                        o.Address = addr;
+                        o.AddressId = addr.Id;
+                        if (!newAddresses.ContainsKey(o.Address.Address) && addr.InDatabase==false)
+                        {
+                            newAddresses.Add(o.Address.Address, addr);
+                            addr.InDatabase = true;
+                        }                            
                     }
-                    else
+                    catch (Exception e)
                     {
-                        if (addr.Item2 == false)
-                            newAddresses.Add(addr.Item1.Address, addr.Item1);
-                        addr.Item2 = true;
-                        o.AddressId = addr.Item1.Id;
-                        o.Address.BlockHeight = tr.BlockHeight;
-                        o.Address.Id = addr.Item1.Id;
+                        throw;
                     }
-                    a.BlockHeight = tr.BlockHeight;
                 }
                 foreach (var i in tr.SlpTransactionInputs)
-                {
                     inputs.Add(i);
-                }
-                //outputs.AddRange(tr.SlpTransactionOutputs);
                 _slpTrCache.AddOrReplace(tr.Hash.ToHex(), tr);
-            }
-                
-
-            //var newAddresses = outputs.Where(o=> _usedAddresses.TryGetValue(o.Address.Address,out var addr) && addr.Item2).Select(o=>(o.Address,o.SlpTransaction.BlockHeight)).Distinct().ToList();            
-            //assign new id-s
-            //var lastId = _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Id) + 1 : 0;
-            //foreach (var na in newAddresses) //assign new addresses ids locally
-            //{             
-            //    na.Address.Id = lastId++;
-            //    _usedAddresses.TryAdd(na.Address.Address, na.Address);
-            //}
-            //foreach (var a in allAddresses)
-            //{
-            //    if (!_usedAddresses.TryGetValue(a.Address.Address, out var addr))
-            //        throw new Exception($"Error address {a} not found!");
-            //    a.Address.Id = addr.Id;
-            //    a.Address.BlockHeight = addr.BlockHeight;
-            //}
+            }                     
             outputs.ForEach(o => { o.AddressId = o.Address.Id;});
             
             {
@@ -271,11 +248,17 @@ namespace Slp.Indexer.Services
                     //pointing to non slp transaction - not relevant at the moment - to set bch data we need to gather data from bch indexer
                     if (outputSlpTx == null) 
                         continue;
-                        //throw new Exception($"Invalid output tx reference {input.SlpSourceTransactionHex}! Make sure slpTrCache is valid!");
+                    //throw new Exception($"Invalid output tx reference {input.SlpSourceTransactionHex}! Make sure slpTrCache is valid!");
                     var referencedOutput = outputSlpTx.SlpTransactionOutputs.ElementAt(input.VOut);
-                    input.Address = referencedOutput.Address;
-                    input.AddressId = referencedOutput.AddressId;
-                    input.Address.BlockHeight = referencedOutput.Address.BlockHeight;
+                    var outputAddress = GetOrCreateAddress(referencedOutput.Address.Address, input.SlpTransaction.BlockHeight);
+                    if (outputAddress == null)
+                    {
+                        _log.LogWarning("Input does not have valid slp output");
+                        continue; //
+                    }
+                        
+                    input.Address = outputAddress;
+                    input.AddressId = outputAddress.Id;
                     input.SlpAmount = referencedOutput.Amount;
                     input.BlockchainSatoshis = referencedOutput.BlockchainSatoshis;
 
@@ -323,7 +306,12 @@ namespace Slp.Indexer.Services
                         _log.LogInformation("Written {0} new inputs.", count);
 
                         count = await outputCopyHelper.SaveAllAsync(pgConnection, outputs);
-                        _log.LogInformation("Written {0} new outputs.", count);                        
+                        _log.LogInformation("Written {0} new outputs.", count);        
+                        
+                        //now fix all outputs that were affected by block range
+
+                        //outputsToUpdate.
+
                     }
                     catch (Exception e)
                     {
@@ -331,7 +319,7 @@ namespace Slp.Indexer.Services
                     }
 
                 }
-                else if (_databaseBackendType == SD.DatabaseBackendType.POSTGRESQL)
+                else if (_databaseBackendType == SD.DatabaseBackendType.MSSQL)
                 {
                     //first delete all remaining blocks
                     //token is never removed from database at least not in the catchup/sync phase so all operations should be upsert
@@ -585,7 +573,8 @@ namespace Slp.Indexer.Services
             _log.LogInformation("Adding addresses to cache...");
             foreach (var a in allAddresses)
             {
-                _usedAddresses.TryAdd(a.Value.Address, (a.Value,true));
+                _usedAddresses.TryAdd(a.Value.Address, a.Value);
+                a.Value.InDatabase = true;
             }
             _log.LogInformation("Adding transaction inputs to transactions...");
             foreach (var i in slpTxIns)
@@ -661,7 +650,9 @@ namespace Slp.Indexer.Services
                         var sourceTr = _slpTrCache.TryGet(input.SourceTxHash.ToHex());
                         if (sourceTr == null)
                         {
-                            input.Address = GetOrCreateAddress("NON-SLP", slpTr.BlockHeight);
+                            var addr = GetOrCreateAddress("NON-SLP", slpTr.BlockHeight);
+                            input.Address = addr;
+                            input.AddressId = addr.Id;
                             continue; //non - slp transaction
                         }
 
@@ -732,13 +723,13 @@ namespace Slp.Indexer.Services
                     db.Entry(slpTr).State = EntityState.Added;
                     foreach (var i in slpTr.SlpTransactionInputs)
                     {
-                        i.Address = GetOrCreateAddress(i.Address.Address, slpTr.BlockHeight);
+                        i.Address = GetOrCreateAddress(i.Address.Address, null);
                         db.Entry(i.Address).State = EntityState.Unchanged;
                         db.Entry(i).State = EntityState.Added;
                     }
                     foreach (var o in slpTr.SlpTransactionOutputs)
                     {
-                        o.Address = GetOrCreateAddress(o.Address.Address, slpTr.BlockHeight);
+                        o.Address = GetOrCreateAddress(o.Address.Address, null);
                         db.Entry(o.Address).State = EntityState.Unchanged;
                         db.Entry(o).State = EntityState.Added;
                     }
@@ -1080,18 +1071,15 @@ namespace Slp.Indexer.Services
                                         continue;
                                     bchAddress = output.ScriptPubKey.GetDestinationAddress(_rpcClient.Network).ToString();
                                 }
-                                var address = GetOrCreateAddress(bchAddress.ToString(), burnTransaction.BlockHeight);
                                 burnTransaction.SlpTransactionOutputs.Add(
                                     new SlpTransactionOutput
                                     {
                                         BlockchainSatoshis = output.Value.ToDecimal(MoneyUnit.Satoshi),
                                         Amount = 0,
-                                        //Address = bchAddress,
-                                        AddressId = address.Id,
-                                        Address = address, // new SlpAddress { Address = bchAddress.ToString(), BlockHeight = burnTransaction.BlockHeight },
+                                        AddressId = -1,
+                                        Address = new SlpAddress { Address = bchAddress.ToString(), BlockHeight = burnTransaction.BlockHeight },
                                         VOut = i,
                                         SlpTransaction = burnTransaction,
-                                        //SlpTransactionHex = burnTransaction.Hex,
                                     });
                             }
                         }                       
@@ -1115,7 +1103,7 @@ namespace Slp.Indexer.Services
                         outAddress = output.Address;
                     else
                     {
-                        outAddress = GetOrCreateAddress(address, burnTransaction.BlockHeight);
+                        outAddress = new SlpAddress { Address = address, BlockHeight = burnTransaction.BlockHeight };
                         //if (!_usedAddresses.TryGetValue(address, out var usedAddr))
                         //{
                         //    var nextId = _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Id) + 1 : 1;
@@ -1492,6 +1480,17 @@ where o.""NextInputId"" <> null and not(t.""BlockHeight"" is null) and t.""Block
             }
 
             {
+                log?.LogInformation("Deleting all outputs >= than block height {0}", blockHeight);
+                using var cmd = dbConnection.CreateCommand();
+                cmd.CommandText =
+$@"delete from ""SlpTransactionOutput"" o
+where o.""SlpTransactionId"" in 
+(select ""Id"" from ""SlpTransaction"" where ""BlockHeight"" > {blockHeight} and ""Id"" = o.""SlpTransactionId"" )";
+                var count = await cmd.ExecuteNonQueryAsync();
+                log?.LogInformation("Deleted {0} outputs", count);
+            }
+
+            {
                 log?.LogInformation("Deleting all inputs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
                 cmd.CommandText =
@@ -1502,16 +1501,7 @@ where i.""SlpTransactionId"" in
                 var count = await cmd.ExecuteNonQueryAsync();
                 log?.LogInformation("Deleted {0} inputs", count);
             }
-            {
-                log?.LogInformation("Deleting all outputs >= than block height {0}", blockHeight);
-                using var cmd = dbConnection.CreateCommand();
-                cmd.CommandText =
-$@"delete from ""SlpTransactionOutput"" o
-where o.""SlpTransactionId"" in 
-(select ""Id"" from ""SlpTransaction"" where ""BlockHeight"" > {blockHeight} and ""Id"" = o.""SlpTransactionId"" )";
-                var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} outputs", count);
-            }
+           
             {
                 log?.LogInformation("Deleting all txs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
