@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Slp.Common.DataAccess;
 using Slp.Common.Models.DbModels;
 using System.Globalization;
+using System.Text;
 
 namespace Slp.Common.Services
 {
@@ -168,7 +169,7 @@ namespace Slp.Common.Services
                     s => new TokenViewModel()
                     {
                         Decimals = s.SlpToken.Decimals,
-                        DocumentUri = s.SlpToken.DocumentUri,
+                        DocumentUri = Encoding.UTF8.GetString(s.SlpToken.DocumentUri),
                         DocumentHash = s.SlpToken.DocumentSha256Hex,
                         Symbol = s.SlpToken.Symbol,
                         Name = s.SlpToken.Name,
@@ -506,7 +507,7 @@ namespace Slp.Common.Services
                             {
                                 Decimals = s.SlpTransaction.SlpToken.Decimals,
                                 DocumentSha256Hex = s.SlpTransaction.SlpToken.DocumentSha256Hex,
-                                DocumentUri = s.SlpTransaction.SlpToken.DocumentUri,
+                                DocumentUri = Encoding.UTF8.GetString(s.SlpTransaction.SlpToken.DocumentUri),
                                 Name = s.SlpTransaction.SlpToken.Name,
                                 Symbol = s.SlpTransaction.SlpToken.Symbol,
                                 TokenIdHEx = s.SlpTransaction.SlpToken.Hash.ToHex(),
@@ -543,7 +544,7 @@ namespace Slp.Common.Services
                             {
                                 Decimals = s.SlpTransaction.SlpToken.Decimals,
                                 DocumentSha256Hex = s.SlpTransaction.SlpToken.DocumentSha256Hex,
-                                DocumentUri = s.SlpTransaction.SlpToken.DocumentUri,
+                                DocumentUri = Encoding.UTF8.GetString(s.SlpTransaction.SlpToken.DocumentUri),
                                 Name = s.SlpTransaction.SlpToken.Name,
                                 Symbol = s.SlpTransaction.SlpToken.Symbol,
                                 TokenIdHEx = s.SlpTransaction.SlpToken.Hash.ToHex(),

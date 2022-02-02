@@ -14,6 +14,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Slp.Common.DataAccess;
 using Slp.Common.Models.DbModels;
+using System.Text;
 
 namespace Slp.Common.Services
 {
@@ -1512,7 +1513,7 @@ namespace Slp.Common.Services
             var slpToken = new SlpToken()
             {
                 Decimals = (byte)slpDetails.Decimals,
-                DocumentUri = slpDetails.DocumentUri,
+                DocumentUri = Encoding.UTF8.GetBytes(slpDetails.DocumentUri),
                 Name = slpDetails.Name,
                 Symbol = slpDetails.Symbol,
                 Hash = trHashHex.FromHex(),

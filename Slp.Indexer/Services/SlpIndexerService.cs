@@ -56,7 +56,7 @@ namespace Slp.Indexer.Services
             .MapInteger(nameof(SlpToken.BlockLastActiveMint), x => x.BlockLastActiveMint)
             .MapInteger(nameof(SlpToken.BlockLastActiveSend), x => x.BlockLastActiveSend)
             .MapNumeric(nameof(SlpToken.CirculatingSupply), x => x.CirculatingSupply)
-            .MapVarchar(nameof(SlpToken.DocumentUri), x => x.DocumentUri)
+            .MapByteArray(nameof(SlpToken.DocumentUri), x => x.DocumentUri)
             .MapInteger(nameof(SlpToken.LastActiveSend), x => x.LastActiveSend)
             .MapVarchar(nameof(SlpToken.MintingBatonStatus), x => x.MintingBatonStatus)
             .MapVarchar(nameof(SlpToken.Name), x => x.Name)
@@ -1656,6 +1656,8 @@ where i.""SlpTransactionId"" in
             }
             catch (Exception e)
             {
+                foreach (var d in e.Data)
+                    _log.LogError(d.ToString());
                 _log.LogError(e.Message);
                 _log.LogError(e.StackTrace);
                 _log.LogError($"{nameof(SyncWithNetworkAsync)} failure: Stopping application");

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Slp.Common.DataAccess;
 
-namespace Slp.Migrations.POSTGRESQL.Slp.Migrations.POSTGRESQL
+namespace Slp.Migrations.POSTGRESQL.Migrations
 {
     [DbContext(typeof(SlpDbContext))]
     partial class SlpDbContextModelSnapshot : ModelSnapshot
@@ -112,9 +112,9 @@ namespace Slp.Migrations.POSTGRESQL.Slp.Migrations.POSTGRESQL
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<string>("DocumentUri")
+                    b.Property<byte[]>("DocumentUri")
                         .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("bytea");
 
                     b.Property<int?>("LastActiveSend")
                         .HasColumnType("integer");

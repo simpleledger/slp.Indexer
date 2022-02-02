@@ -28,7 +28,7 @@ namespace Slp.Common.Models.DbModels
         [MaxLength(SD.MessageSize)]
         public string Symbol { get; set; }
         [MaxLength(SD.MessageSize)]
-        public string DocumentUri { get; set; }
+        public byte[] DocumentUri { get; set; }
         [MaxLength(SD.MessageSize)]
         public string DocumentSha256Hex { get; set; }
         public int Decimals { get; set; }

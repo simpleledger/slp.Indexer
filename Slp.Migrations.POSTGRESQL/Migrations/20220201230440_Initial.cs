@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace Slp.Migrations.POSTGRESQL.Slp.Migrations.POSTGRESQL
+namespace Slp.Migrations.POSTGRESQL.Migrations
 {
     public partial class Initial : Migration
     {
@@ -63,7 +63,7 @@ namespace Slp.Migrations.POSTGRESQL.Slp.Migrations.POSTGRESQL
                     VersionType = table.Column<int>(type: "integer", nullable: false),
                     Name = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Symbol = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    DocumentUri = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    DocumentUri = table.Column<byte[]>(type: "bytea", maxLength: 1000, nullable: true),
                     DocumentSha256Hex = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     Decimals = table.Column<int>(type: "integer", nullable: false),
                     LastActiveSend = table.Column<int>(type: "integer", nullable: true),
