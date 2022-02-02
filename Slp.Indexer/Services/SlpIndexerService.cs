@@ -251,6 +251,11 @@ namespace Slp.Indexer.Services
                     //throw new Exception($"Invalid output tx reference {input.SlpSourceTransactionHex}! Make sure slpTrCache is valid!");
                     var referencedOutput = outputSlpTx.SlpTransactionOutputs.ElementAt(input.VOut);
                     var outputAddress = GetOrCreateAddress(referencedOutput.Address.Address, input.SlpTransaction.BlockHeight);
+                    if (outputAddress.InDatabase == false)
+                    {
+                        newAddresses.Add(outputAddress.Address, outputAddress);
+                        outputAddress.InDatabase = true;
+                    }
                     if (outputAddress == null)
                     {
                         _log.LogWarning("Input does not have valid slp output");
@@ -304,14 +309,9 @@ namespace Slp.Indexer.Services
 
                         count = await inputCopyHelper.SaveAllAsync(pgConnection, inputs);
                         _log.LogInformation("Written {0} new inputs.", count);
-
-                        count = await outputCopyHelper.SaveAllAsync(pgConnection, outputs);
-                        _log.LogInformation("Written {0} new outputs.", count);        
                         
-                        //now fix all outputs that were affected by block range
-
-                        //outputsToUpdate.
-
+                        count = await outputCopyHelper.SaveAllAsync(pgConnection, outputs);
+                        _log.LogInformation("Written {0} new outputs.", count);
                     }
                     catch (Exception e)
                     {
@@ -821,8 +821,10 @@ namespace Slp.Indexer.Services
             ConcurrentDictionary<int, Tuple<Block, List<SlpTransaction>, List<Transaction>>> fetchedBlockSlpTx
             )
         {
+restart:
             try
             {
+
                 if (fetchedBlockSlpTx.TryGetValue(h, out var value) && value != null)
                     return; //already have it;
 
@@ -850,9 +852,10 @@ namespace Slp.Indexer.Services
                 while (!fetchedBlockSlpTx.ContainsKey(h)) //ensure height is added. If another worker added then just skipp this step
                     fetchedBlockSlpTx.TryAdd(h, new Tuple<Block, List<SlpTransaction>, List<Transaction>>(block, slpTxs, txs));
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                _log.LogWarning($"Failed to fetch block {h}: {e.Message}. Retrying...");
+                goto restart;
             }
         }
 
