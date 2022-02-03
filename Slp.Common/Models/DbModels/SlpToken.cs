@@ -53,6 +53,9 @@ namespace Slp.Common.Models.DbModels
         public int? BlockLastActiveSend { get; set; }
         public int? BlockLastActiveMint { get; set; }
 
+        [NotMapped]
+        public bool InDatabase { get; set; }
+
         public override string ToString()
         {
             return Name;

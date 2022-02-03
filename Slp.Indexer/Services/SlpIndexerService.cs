@@ -207,14 +207,22 @@ namespace Slp.Indexer.Services
             List<SlpBlock> localBlocks)
         {
             _log.LogInformation("Saving batch {0} of {1} blocks and {2} txs to db async...", batchCounter,localBlocks.Count, localBatch.Count);                
-            var tokens = localBatch.Where(t => t.SlpToken != null && t.Type == SlpTransactionType.GENESIS).Select(t => (t.SlpToken,t.BlockHeight)).ToList();
+            var tokens = localBatch
+                        .Where(t => t.SlpToken != null && 
+                            t.Type == SlpTransactionType.GENESIS)
+                        .Select(t => (t.SlpToken,t.BlockHeight))
+                        .ToList();
+
+            tokens = tokens.Where(t => !t.SlpToken.InDatabase).ToList();
+
             tokens.ForEach(t =>
             {
                 t.SlpToken.BlockHeight = t.BlockHeight;
                 t.SlpToken.Name = t.SlpToken.Name.Trim().Trim('\0');
                 t.SlpToken.DocumentSha256Hex = t.SlpToken.Name.Trim().Trim('\0');
                 _tokenMap.AddOrReplace(t.SlpToken.Hash.ToHex(), t.SlpToken);
-             });
+                t.SlpToken.InDatabase = true;
+            });
 
             var outputs = new List<SlpTransactionOutput>();
             var inputs = new List<SlpTransactionInput>();
@@ -582,7 +590,10 @@ namespace Slp.Indexer.Services
 
             _log.LogInformation("Adding tokens to cache...");
             foreach (var t in tokens)
+            {
+                t.Value.InDatabase = true;
                 _tokenMap.TryAdd(t.Key, t.Value);
+            }
 
             var slpTxs = task0.Result;
             foreach (var tr in slpTxs)
@@ -1532,7 +1543,7 @@ $@"select o.""Id""
 from ""SlpTransactionOutput"" o
 left join ""SlpTransactionInput"" i on o.""NextInputId"" = i.""Id""
 inner join ""SlpTransaction"" t on i.""SlpTransactionId"" = t.""Id""
-where not(o.""NextInputId"" is null) and not(t.""BlockHeight"" is null) and t.""BlockHeight"" >= {blockHeight}
+where not(o.""NextInputId"" is null) and (t.""BlockHeight"" is null or t.""BlockHeight"" >= {blockHeight} )
                 ";
                 _log.LogInformation(cmd.CommandText);
                 var ids = new List<object>();
@@ -1572,7 +1583,7 @@ where not(o.""NextInputId"" is null) and not(t.""BlockHeight"" is null) and t.""
                 cmd.CommandText =
 $@"delete from ""SlpTransactionOutput"" o
 where o.""SlpTransactionId"" in 
-(select ""Id"" from ""SlpTransaction"" where ""BlockHeight"" > {blockHeight} and ""Id"" = o.""SlpTransactionId"" )";
+(select ""Id"" from ""SlpTransaction"" where (""BlockHeight"" > {blockHeight} or ""BlockHeight"" is null) and ""Id"" = o.""SlpTransactionId"" )";
                 var count = await cmd.ExecuteNonQueryAsync();
                 _log?.LogInformation("Deleted {0} outputs", count);
             }
@@ -1584,7 +1595,7 @@ where o.""SlpTransactionId"" in
 $@"delete from 
 ""SlpTransactionInput"" i 
 where i.""SlpTransactionId"" in 
-(select ""Id"" from ""SlpTransaction"" where ""BlockHeight"" > {blockHeight} and ""Id"" = i.""SlpTransactionId"" )";    
+(select ""Id"" from ""SlpTransaction"" where (""BlockHeight"" > {blockHeight} or ""BlockHeight"" is null) and ""Id"" = i.""SlpTransactionId"" )";    
                 var count = await cmd.ExecuteNonQueryAsync();
                 _log?.LogInformation("Deleted {0} inputs", count);
             }
@@ -1592,7 +1603,7 @@ where i.""SlpTransactionId"" in
             {
                 _log?.LogInformation("Deleting all txs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
-                cmd.CommandText = $@"delete from ""SlpTransaction"" t where t.""BlockHeight"" >= {blockHeight}";
+                cmd.CommandText = $@"delete from ""SlpTransaction"" t where (t.""BlockHeight"" >= {blockHeight} or t.""BlockHeight"" is null)";
                 var count = await cmd.ExecuteNonQueryAsync();
                 _log?.LogInformation("Deleted {0} txs", count);
             }
@@ -1609,7 +1620,7 @@ where i.""SlpTransactionId"" in
             {
                 _log?.LogInformation("Deleting all tokens >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
-                cmd.CommandText = $@"delete from ""SlpToken"" a where a.""BlockHeight"" >= {blockHeight}";
+                cmd.CommandText = $@"delete from ""SlpToken"" a where (a.""BlockHeight"" >= {blockHeight} or a.""BlockHeight"" is null)";
                 var count = await cmd.ExecuteNonQueryAsync();
                 _log?.LogInformation("Deleted {0} txs", count);
             }
