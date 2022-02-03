@@ -211,6 +211,8 @@ namespace Slp.Indexer.Services
             tokens.ForEach(t =>
             {
                 t.SlpToken.BlockHeight = t.BlockHeight;
+                t.SlpToken.Name = t.SlpToken.Name.Trim().Trim('\0');
+                t.SlpToken.DocumentSha256Hex = t.SlpToken.Name.Trim().Trim('\0');
                 _tokenMap.AddOrReplace(t.SlpToken.Hash.ToHex(), t.SlpToken);
              });
 
@@ -683,6 +685,11 @@ namespace Slp.Indexer.Services
                         if (sourceTr == null)
                         {
                             var addr = GetOrCreateAddress("NON-SLP", slpTr.BlockHeight);
+                            if (!addr.InDatabase)
+                            {
+                                await db.SlpAddress.AddAsync(addr);
+                                addr.InDatabase = true;
+                            }
                             input.Address = addr;
                             input.AddressId = addr.Id;
                             continue; //non - slp transaction
@@ -697,7 +704,7 @@ namespace Slp.Indexer.Services
                             if( output == null )
                                 throw new Exception($"Failed to retrieve input source transaction {input.SourceTxHash.ToHex()} output at {input.VOut}");
                             input.Address = output.Address;
-                            input.AddressId = output.Address.Id;
+                            input.AddressId = output.AddressId;
                             input.SlpAmount = output.Amount;
                             input.BlockchainSatoshis = output.BlockchainSatoshis;
 
@@ -756,13 +763,24 @@ namespace Slp.Indexer.Services
                     foreach (var i in slpTr.SlpTransactionInputs)
                     {
                         i.Address = GetOrCreateAddress(i.Address.Address, null);
-                        db.Entry(i.Address).State = EntityState.Unchanged;
+                        if (!i.Address.InDatabase)
+                        {
+                            await db.SlpAddress.AddAsync(i.Address);
+                            i.Address.InDatabase = true;
+                        }
+                        //db.Entry(i.Address).State = EntityState.Unchanged;
                         db.Entry(i).State = EntityState.Added;
                     }
                     foreach (var o in slpTr.SlpTransactionOutputs)
                     {
                         o.Address = GetOrCreateAddress(o.Address.Address, null);
-                        db.Entry(o.Address).State = EntityState.Unchanged;
+                        if (!o.Address.InDatabase)
+                        {
+                            await db.SlpAddress.AddAsync(o.Address);
+                            o.Address.InDatabase = true;
+                        }
+                        o.AddressId = o.Address.Id;
+                        //db.Entry(o.Address).State = EntityState.Unchanged;
                         db.Entry(o).State = EntityState.Added;
                     }
                     _log.LogInformation("Mempool {0} transaction {1} added.", slpTr.Type, slpTr.Hash.ToHex());
