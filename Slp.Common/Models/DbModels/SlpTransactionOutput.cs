@@ -35,5 +35,6 @@ namespace Slp.Common.Models.DbModels
         public long SlpTransactionId { get; set; }
         public virtual SlpTransaction SlpTransaction { get; set; }
 
+       // public int? BlockHeight { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Slp.Common.DataAccess;
@@ -9,9 +10,10 @@ using Slp.Common.DataAccess;
 namespace Slp.Migrations.POSTGRESQL.Migrations
 {
     [DbContext(typeof(SlpDbContext))]
-    partial class SlpDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220203112100_RemoveAddressBlockHeightFromDb")]
+    partial class RemoveAddressBlockHeightFromDb
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

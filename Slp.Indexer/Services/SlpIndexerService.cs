@@ -22,6 +22,7 @@ using Slp.Common.Models.Enums;
 using Slp.Common.Extensions;
 using PostgreSQLCopyHelper;
 using Npgsql;
+using System.Threading;
 
 namespace Slp.Indexer.Services
 {
@@ -95,8 +96,8 @@ namespace Slp.Indexer.Services
         PostgreSQLCopyHelper<SlpAddress> addressCopyHelper = new PostgreSQLCopyHelper<SlpAddress>("public", nameof(SlpAddress))
            .UsePostgresQuoting()
            .MapInteger(nameof(SlpAddress.Id), x => x.Id)
-           .MapVarchar(nameof(SlpAddress.Address), x => x.Address) 
-           .MapInteger(nameof(SlpToken.BlockHeight), x => x.BlockHeight);
+           .MapVarchar(nameof(SlpAddress.Address), x => x.Address); 
+           //.MapInteger(nameof(SlpToken.BlockHeight), x => x.BlockHeight);
 
         PostgreSQLCopyHelper<SlpTransactionInput> inputCopyHelper = new PostgreSQLCopyHelper<SlpTransactionInput>("public", nameof(SlpTransactionInput))
             .UsePostgresQuoting()
@@ -149,18 +150,25 @@ namespace Slp.Indexer.Services
 
         SlpAddress GetAddress(string address)
         {
-            if (!_usedAddresses.TryGetValue(address, out var addr))
+            if (_usedAddresses.TryGetValue(address, out var addr))
                 return addr;
             return null;
         }
+        int _addressIndex=0;
         SlpAddress GetOrCreateAddress(string address,int? blockHeight)
         {
             //using var db = new SlpDbContext(_dbOptions);
             if (!_usedAddresses.TryGetValue(address, out var addr))
             {
-                var nextId = _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Id) + 1 : 1;
-                addr = new SlpAddress { Id = nextId, Address = address, BlockHeight = blockHeight, InDatabase = false };
-                _usedAddresses.TryAdd(address, addr);
+                var nextId = Interlocked.Increment(ref _addressIndex); // _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Id) + 1 : 1;
+                addr = new SlpAddress { Id = (int)nextId, Address = address, InDatabase = false };
+                var res = _usedAddresses.TryAdd(address, addr);
+                if (!res)
+                {
+                    if (!_usedAddresses.TryGetValue(address, out var addr2))
+                        throw new Exception("Failed to retrieve address");
+                    return addr2;
+                }
             }
             return addr;
         }
@@ -198,7 +206,7 @@ namespace Slp.Indexer.Services
             List<SlpTransaction> localBatch,
             List<SlpBlock> localBlocks)
         {
-            _log.LogInformation("Saving batch {0} to db async...", batchCounter);                
+            _log.LogInformation("Saving batch {0} of {1} blocks and {2} txs to db async...", batchCounter,localBlocks.Count, localBatch.Count);                
             var tokens = localBatch.Where(t => t.SlpToken != null && t.Type == SlpTransactionType.GENESIS).Select(t => (t.SlpToken,t.BlockHeight)).ToList();
             tokens.ForEach(t =>
             {
@@ -209,59 +217,72 @@ namespace Slp.Indexer.Services
             var outputs = new List<SlpTransactionOutput>();
             var inputs = new List<SlpTransactionInput>();
             var newAddresses = new Dictionary<string, SlpAddress>();
+            _log.LogInformation("Collecting inputs and outputs...");
             foreach (var tr in localBatch)
             {
-                //inputs.AddRange(tr.SlpTransactionInputs);               
-                foreach (var o in tr.SlpTransactionOutputs)
-                {
-                    try
+                outputs.AddRange(tr.SlpTransactionOutputs);               
+                //foreach (var o in tr.SlpTransactionOutputs)
+                //{
+                //    //outputs.Add(o);                        
+                //    //var addr = GetOrCreateAddress(o.Address.Address, tr.BlockHeight);
+                //    //o.Address = addr;
+                //    //o.AddressId = addr.Id;
+                //    if (!newAddresses.ContainsKey(o.Address.Address) && addr.InDatabase==false)
+                //    {
+                //        newAddresses.Add(o.Address.Address, addr);
+                //        addr.InDatabase = true;
+                //    }
+                //}
+                //foreach (var i in tr.SlpTransactionInputs)
+                //    inputs.Add(i);
+                inputs.AddRange(tr.SlpTransactionInputs);
+                //Console.Write(".");
+                //_log.LogInformation(tr.Hash.ToHex());
+                //_slpTrCache.AddOrReplace(tr.Hash.ToHex(), tr);
+            }
+            _log.LogInformation("Checking for new addresses...");
+            foreach (var o in outputs)
+            {
+                if (_usedAddresses.TryGetValue(o.Address.Address, out var value) && !value.InDatabase)
+                    if (!newAddresses.ContainsKey(o.Address.Address))
                     {
-                        outputs.Add(o);                        
-                        var addr = GetOrCreateAddress(o.Address.Address, tr.BlockHeight);
-                        o.Address = addr;
-                        o.AddressId = addr.Id;
-                        if (!newAddresses.ContainsKey(o.Address.Address) && addr.InDatabase==false)
-                        {
-                            newAddresses.Add(o.Address.Address, addr);
-                            addr.InDatabase = true;
-                        }                            
+                        newAddresses.Add(o.Address.Address, value);
+                        value.InDatabase = true;
                     }
-                    catch (Exception e)
-                    {
-                        throw;
-                    }
-                }
-                foreach (var i in tr.SlpTransactionInputs)
-                    inputs.Add(i);
-                _slpTrCache.AddOrReplace(tr.Hash.ToHex(), tr);
-            }                     
-            outputs.ForEach(o => { o.AddressId = o.Address.Id;});
+            }
+
+            //_log.LogInformation("Setting address ids...");
+            //outputs.ForEach(o => { o.AddressId = o.Address.Id;});
             
             {
-                using var db = new SlpDbContext(_dbOptions);            
+                using var db = new SlpDbContext(_dbOptions);
                 //fast relink based on local _slpTrCache and then bulk insert them - this is possible since we are 
                 // settting id on client side
+                _log.LogInformation("Processing inputs...", batchCounter);
                 var outputsToUpdate = new List<SlpTransactionOutput>();
                 foreach (var input in inputs)
                 {
                     var outputSlpTx = _slpTrCache.TryGet(input.SourceTxHash.ToHex());
                     //pointing to non slp transaction - not relevant at the moment - to set bch data we need to gather data from bch indexer
-                    if (outputSlpTx == null) 
+                    if (outputSlpTx == null)
+                    {
                         continue;
+                    }
                     //throw new Exception($"Invalid output tx reference {input.SlpSourceTransactionHex}! Make sure slpTrCache is valid!");
                     var referencedOutput = outputSlpTx.SlpTransactionOutputs.ElementAt(input.VOut);
-                    var outputAddress = GetOrCreateAddress(referencedOutput.Address.Address, input.SlpTransaction.BlockHeight);
-                    if (outputAddress.InDatabase == false)
-                    {
-                        newAddresses.Add(outputAddress.Address, outputAddress);
-                        outputAddress.InDatabase = true;
-                    }
+                    var outputAddress = GetAddress(referencedOutput.Address.Address);
                     if (outputAddress == null)
                     {
                         _log.LogWarning("Input does not have valid slp output");
                         continue; //
                     }
-                        
+                    if (outputAddress.InDatabase == false)
+                    {
+                        newAddresses.Add(outputAddress.Address, outputAddress);
+                        outputAddress.InDatabase = true;
+                        //throw new Exception($"Cannot find input address from ref output {outputAddress.Address} at tx {input.SourceTxHash.ToHex()}:{input.VOut}");
+                    }
+
                     input.Address = outputAddress;
                     input.AddressId = outputAddress.Id;
                     input.SlpAmount = referencedOutput.Amount;
@@ -278,13 +299,14 @@ namespace Slp.Indexer.Services
                     if (!localBatch.Contains(outputSlpTx))
                         outputsToUpdate.Add(referencedOutput);
                 }
+                _log.LogInformation("Update slp state...");
                 //before anything is changed in database make sure that counter is set to first block
                 //this would be probaby better 
-                if(localBlocks.Any())
+                if (localBlocks.Any())
                     await db.UpdateSlpStateAsync(localBlocks.First().Height, localBlocks.First().Hash.ToHex());
 
                 if (_databaseBackendType == SD.DatabaseBackendType.POSTGRESQL) //bulk extensions does not support postgre backend yet so we use postgrebulkcopy to insert
-                {
+                {                    
                     try
                     {
                         var dgConnection = db.Database.GetDbConnection();
@@ -576,12 +598,19 @@ namespace Slp.Indexer.Services
                 _usedAddresses.TryAdd(a.Value.Address, a.Value);
                 a.Value.InDatabase = true;
             }
+            _addressIndex = _usedAddresses.Any() ?  _usedAddresses.Max(a => a.Value.Id) : 0;
+
+            //var addr = GetAddress("simpleledger:qpnemhrgtwnegp0z5d5lm6fqvnj3cpv5jg45rrslgk");
+
             _log.LogInformation("Adding transaction inputs to transactions...");
             foreach (var i in slpTxIns)
             {
                 var tx = slpTxs.TryGet(i.Value.SlpTransactionId);
                 i.Value.SlpTransaction = tx;
-                i.Value.Address = allAddresses.TryGet(i.Value.AddressId??-1);
+
+                if (i.Value.AddressId.HasValue && allAddresses.TryGetValue(i.Value.AddressId.Value, out var addr))
+                    i.Value.Address = addr;                                
+                
                 tx.SlpTransactionInputs.Add(i.Value);
             }
             _log.LogInformation("Adding transaction outpus to transactions...");
@@ -589,7 +618,10 @@ namespace Slp.Indexer.Services
             {
                 var tx = slpTxs.TryGet(o.Value.SlpTransactionId);
                 o.Value.SlpTransaction = tx;
-                o.Value.Address = allAddresses.TryGet(o.Value.AddressId);
+
+                if (allAddresses.TryGetValue(o.Value.AddressId, out var addr))
+                    o.Value.Address = addr;
+                //o.Value.Address = allAddresses.TryGet(o.Value.AddressId);
                 tx.SlpTransactionOutputs.Add(o.Value);
             }
             _log.LogInformation("Preparing slp transaction cache...");
@@ -837,6 +869,11 @@ restart:
                     var slpTr = _slpService.GetSlpTransaction(tr);
                     if (slpTr != null)
                     {
+                        foreach (var o in slpTr.SlpTransactionOutputs)
+                        {
+                            var address = GetOrCreateAddress(o.Address.Address, h);
+                            o.AddressId = address.Id;
+                        }
                         slpTxs.Add(slpTr);
                         _slpTrCache.AddOrReplace(slpTr.Hash.ToHex(), slpTr);
                         if (slpTr.Type == SlpTransactionType.GENESIS && !_tokenMap.ContainsKey(slpTr.Hash.ToHex()))
@@ -1074,13 +1111,14 @@ restart:
                                         continue;
                                     bchAddress = output.ScriptPubKey.GetDestinationAddress(_rpcClient.Network).ToString();
                                 }
+                                var address = GetOrCreateAddress(bchAddress.ToString(), burnTransaction.BlockHeight);
                                 burnTransaction.SlpTransactionOutputs.Add(
                                     new SlpTransactionOutput
                                     {
                                         BlockchainSatoshis = output.Value.ToDecimal(MoneyUnit.Satoshi),
                                         Amount = 0,
-                                        AddressId = -1,
-                                        Address = new SlpAddress { Address = bchAddress.ToString(), BlockHeight = burnTransaction.BlockHeight },
+                                        AddressId = address.Id,
+                                        Address = address,
                                         VOut = i,
                                         SlpTransaction = burnTransaction,
                                     });
@@ -1106,7 +1144,7 @@ restart:
                         outAddress = output.Address;
                     else
                     {
-                        outAddress = new SlpAddress { Address = address, BlockHeight = burnTransaction.BlockHeight };
+                        outAddress = new SlpAddress { Address = address };
                         //if (!_usedAddresses.TryGetValue(address, out var usedAddr))
                         //{
                         //    var nextId = _usedAddresses.Any() ? _usedAddresses.Max(a => a.Value.Id) + 1 : 1;
@@ -1457,7 +1495,7 @@ restart:
             return result;
         }
 
-        public async Task DeleteSlpTransactionsNewerThanBlockHeightRawPostgreAsync(int blockHeight, ILogger log = null, int commandsTimeout = SD.TimeConsumingQueryTimeoutSeconds)
+        public async Task DeleteSlpTransactionsNewerThanBlockHeightRawPostgreAsync(int blockHeight, int commandsTimeout = SD.TimeConsumingQueryTimeoutSeconds)
         {
             using var db = new SlpDbContext(_dbOptions);
             db.Database.SetCommandTimeout(commandsTimeout);
@@ -1469,32 +1507,60 @@ restart:
                 pgConnection.Open();
 
             {
-                log?.LogInformation("Reseting all outputs spent in inputs >= than block height {0}", blockHeight);
+                _log.LogInformation("Reseting all outputs spent in inputs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
-                cmd.CommandText =
-    $@"update ""SlpTransactionOutput"" 
-    set ""NextInputId"" = null
+                cmd.CommandText = 
+$@"select o.""Id"" 
 from ""SlpTransactionOutput"" o
 left join ""SlpTransactionInput"" i on o.""NextInputId"" = i.""Id""
 inner join ""SlpTransaction"" t on i.""SlpTransactionId"" = t.""Id""
-where o.""NextInputId"" <> null and not(t.""BlockHeight"" is null) and t.""BlockHeight"" >= {blockHeight}";
-                var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Reset {0} outputs spent in inputs >= than block height {0}", count);
+where not(o.""NextInputId"" is null) and not(t.""BlockHeight"" is null) and t.""BlockHeight"" >= {blockHeight}
+                ";
+                _log.LogInformation(cmd.CommandText);
+                var ids = new List<object>();
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        ids.Add(reader.GetInt32(0));
+                    }
+                }
+                _log.LogInformation("Read {0} ids from db.", ids.Count);
+                for (var i = 0; i < ids.Count; i += 50)
+                {
+                    var idSet = ids.Skip(i).Take(50);
+                    if (!idSet.Any())
+                        break;
+                    var idStrSet = idSet.MergeToDelimitedString();
+                    _log.LogInformation($"Updating outputs {idStrSet}...");
+                    cmd.CommandText = @$"update ""SlpTransactionOutput"" set ""NextInputId""=null where ""Id"" in ({idStrSet})";
+                    var res = await cmd.ExecuteNonQueryAsync();                    
+                }
+                
+                //                cmd.CommandText =
+                //        $@"update ""SlpTransactionOutput"" 
+                //    set ""NextInputId"" = null
+                //from ""SlpTransactionOutput"" o
+                //left join ""SlpTransactionInput"" i on o.""NextInputId"" = i.""Id""
+                //inner join ""SlpTransaction"" t on i.""SlpTransactionId"" = t.""Id""
+                //where not(o.""NextInputId"" is null) and not(t.""BlockHeight"" is null) and t.""BlockHeight"" >= {blockHeight}";
+                //                var count = await cmd.ExecuteNonQueryAsync();
+                _log.LogInformation("Reset {0} outputs spent in inputs >= than block height {1}", ids.Count, blockHeight);
             }
 
             {
-                log?.LogInformation("Deleting all outputs >= than block height {0}", blockHeight);
+                _log?.LogInformation("Deleting all outputs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
                 cmd.CommandText =
 $@"delete from ""SlpTransactionOutput"" o
 where o.""SlpTransactionId"" in 
 (select ""Id"" from ""SlpTransaction"" where ""BlockHeight"" > {blockHeight} and ""Id"" = o.""SlpTransactionId"" )";
                 var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} outputs", count);
+                _log?.LogInformation("Deleted {0} outputs", count);
             }
 
             {
-                log?.LogInformation("Deleting all inputs >= than block height {0}", blockHeight);
+                _log?.LogInformation("Deleting all inputs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
                 cmd.CommandText =
 $@"delete from 
@@ -1502,39 +1568,40 @@ $@"delete from
 where i.""SlpTransactionId"" in 
 (select ""Id"" from ""SlpTransaction"" where ""BlockHeight"" > {blockHeight} and ""Id"" = i.""SlpTransactionId"" )";    
                 var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} inputs", count);
+                _log?.LogInformation("Deleted {0} inputs", count);
             }
            
             {
-                log?.LogInformation("Deleting all txs >= than block height {0}", blockHeight);
+                _log?.LogInformation("Deleting all txs >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
                 cmd.CommandText = $@"delete from ""SlpTransaction"" t where t.""BlockHeight"" >= {blockHeight}";
                 var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} txs", count);
+                _log?.LogInformation("Deleted {0} txs", count);
             }
 
-            {
-                log?.LogInformation("Deleting all addresses >= than block height {0}", blockHeight);
-                using var cmd = dbConnection.CreateCommand();
-                cmd.CommandText = $@"delete from ""SlpAddress"" a where a.""BlockHeight"" >= {blockHeight}";
-                var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} txs", count);
-            }
+            //leave addresses in database - no need to delete and read then since they are mapped via dictionary 
+            //{
+            //    _log?.LogInformation("Deleting all addresses >= than block height {0}", blockHeight);
+            //    using var cmd = dbConnection.CreateCommand();
+            //    cmd.CommandText = $@"delete from ""SlpAddress"" a where a.""BlockHeight"" >= {blockHeight}";
+            //    var count = await cmd.ExecuteNonQueryAsync();
+            //    _log?.LogInformation("Deleted {0} txs", count);
+            //}
 
             {
-                log?.LogInformation("Deleting all tokens >= than block height {0}", blockHeight);
+                _log?.LogInformation("Deleting all tokens >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
                 cmd.CommandText = $@"delete from ""SlpToken"" a where a.""BlockHeight"" >= {blockHeight}";
                 var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} txs", count);
+                _log?.LogInformation("Deleted {0} txs", count);
             }
 
             {
-                log?.LogInformation("Deleting all blocks >= than block height {0}", blockHeight);
+                _log?.LogInformation("Deleting all blocks >= than block height {0}", blockHeight);
                 using var cmd = dbConnection.CreateCommand();
                 cmd.CommandText = $@"delete from ""SlpBlock"" b where b.""Height"" >= {blockHeight}";
                 var count = await cmd.ExecuteNonQueryAsync();
-                log?.LogInformation("Deleted {0} blocks", count);
+                _log?.LogInformation("Deleted {0} blocks", count);
             }
             
             ////token are never deleted - once inserted into database it can stay there since hex is key and 

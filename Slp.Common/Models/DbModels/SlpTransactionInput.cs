@@ -31,5 +31,7 @@ namespace Slp.Common.Models.DbModels
         [MaxLength(SD.HashSize)]
         public byte[] SourceTxHash { get; set; }
         public int VOut { get; set; }        
+
+       // public int? BlockHeight { get; set; }
     }
 }

@@ -12,6 +12,7 @@ using Slp.Common.DataAccess;
 using Slp.Common.Interfaces;
 using Slp.Common.Options;
 using Slp.Common.Services;
+using Slp.Common.Utility;
 using System;
 
 namespace Slp.API
@@ -49,14 +50,24 @@ namespace Slp.API
                 c.EnableAnnotations();
                 c.SwaggerDoc("v2", new OpenApiInfo { Title = "Slp.API", Version = "v2" });
             });
-            var connectionString = Configuration.GetConnectionString("SlpDbConnection");
+            var connectionString = Configuration.GetConnectionString("SlpDbConnection");            
             services.AddDbContext<SlpDbContext>(
                options =>
                {
 #if DEBUG
                     options.EnableSensitiveDataLogging();
 #endif
-                    options.UseSqlServer(connectionString);
+                   var databaseType = Configuration.GetValue(nameof(SD.DatabaseBackend), SD.DatabaseBackend);
+                   if (databaseType == SD.DatabaseBackendType.POSTGRESQL)
+                   {
+                       options.UseNpgsql(connectionString, x => x.MigrationsAssembly("Slp.Migrations.POSTGRESQL"));
+                   }
+                   else if (databaseType == SD.DatabaseBackendType.MSSQL)
+                   {
+                       options.UseSqlServer(connectionString, x => x.MigrationsAssembly("Slp.Migrations.MSSQL"));
+                   }
+                   else
+                       throw new NotSupportedException();
                },
                contextLifetime: ServiceLifetime.Scoped,ServiceLifetime.Scoped
            );

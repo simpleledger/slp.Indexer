@@ -9,9 +9,10 @@ namespace Slp.Common.Models.DbModels
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int Id { get; set; }
         [MaxLength(SD.AddressSize)]
-        [ForeignKey(nameof(Block))]
+        //[ForeignKey(nameof(Block))]
+        [NotMapped]
         public int? BlockHeight { get; set; }
-        public SlpBlock Block { get; set; }
+        //public SlpBlock Block { get; set; }
         public string Address { get; set; }
 
         [NotMapped]
