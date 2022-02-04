@@ -502,30 +502,41 @@ namespace Slp.Indexer.Services
                                             .Include(t => t.NextInput)
                                                 .ThenInclude(t => t.SlpTransaction)
                                             .Where(t => t.NextInputId != null && !t.NextInput.SlpTransaction.BlockHeight.HasValue);
-                var updated = await outputsClearLinks.BatchUpdateAsync(a => new SlpTransactionOutput { NextInputId = null });
+                foreach (var ocl in outputsClearLinks)
+                {
+                    ocl.NextInput = null;
+                    ocl.NextInputId = null;
+                }
 
                 _log.LogInformation("Deleting all unconfirmed inputs...");
                 var lastBlockTxInputs = db.SlpTransactionInput
                     //.AsNoTracking()
                     .Include(t => t.SlpTransaction)
                     .Where(t => !t.SlpTransaction.BlockHeight.HasValue);
-                await lastBlockTxInputs.BatchDeleteAsync();
+                db.RemoveRange(lastBlockTxInputs);
 
                 _log.LogInformation("Deleting all unconfirmed outputs...");
                 var lastBlockTxOutputs = db.SlpTransactionOutput
                     //.AsNoTracking()
                     .Include(t => t.SlpTransaction).Where(t => !t.SlpTransaction.BlockHeight.HasValue);
-                await lastBlockTxOutputs.BatchDeleteAsync();
+                db.RemoveRange(lastBlockTxOutputs);
+                //await lastBlockTxOutputs.BatchDeleteAsync();
 
                 _log.LogInformation("Deleting all unconfirmed transactions...");
                 var lastBlockTxs = db.SlpTransaction
                     //.AsNoTracking()
                     .Where(t => !t.BlockHeight.HasValue);
-                await lastBlockTxs.BatchDeleteAsync();
-
+                //await lastBlockTxs.BatchDeleteAsync();
+                db.RemoveRange(lastBlockTxs);
                 _log.LogInformation("Deleting all slp tokens with zero transactions...");
-                
-             
+                var tokens = db.SlpToken
+                    .Where(t => !t.BlockHeight.HasValue);
+                db.RemoveRange(tokens);
+
+                _log.LogInformation("Saving unconfirmed cleanup changes...");
+                await db.SaveChangesAsync();
+
+
                 //remove tx also from cache and validator
                 foreach (var tx in txs)
                 {
