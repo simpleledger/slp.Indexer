@@ -38,6 +38,12 @@ namespace Slp.Common.Extensions
         public static string ToPrefixedSlpAddress(this string address)
         {
             var data = DecodeSlpAddress(address);
+			if (data.Prefix == AddressPrefix.bitcoincash)
+                data.Prefix = AddressPrefix.simpleledger;
+            else if (data.Prefix == AddressPrefix.bchtest)
+                data.Prefix = AddressPrefix.slptest;
+            else if (data.Prefix == AddressPrefix.bchreg)
+                data.Prefix = AddressPrefix.slpreg;
             return EncodeAsSlpaddr(data);
         }
 
