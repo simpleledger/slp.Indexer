@@ -492,25 +492,26 @@ namespace Slp.Indexer.Services
             db.Database.SetCommandTimeout(commandsTimeout);
             var txs = await db.SlpTransaction
                 //.AsNoTracking()
-                .Where(t => !t.BlockHeight.HasValue == true)
+                .Where(t => !t.BlockHeight.HasValue)
                 .ToArrayAsync();
             if (txs.Any())
             {
                 _log.LogInformation("Deleting all unconfirmed output nextId links...");
-                var outputsClearLinks = db.SlpTransactionOutput
-                                            //.AsNoTracking()
-                                            .Include(t => t.NextInput)
-                                                .ThenInclude(t => t.SlpTransaction)
-                                            .Where(t => t.NextInputId != null && !t.NextInput.SlpTransaction.BlockHeight.HasValue);
-                foreach (var ocl in outputsClearLinks)
-                {
-                    ocl.NextInput = null;
-                    ocl.NextInputId = null;
-                }
+                //TODO: this should be ignored - mempool tx must never fix source chain tx - as long as in mempool links will not work but
+                //they can still be retrieved with additional calls.
+                //var outputsClearLinks = db.SlpTransactionOutput
+                //                            .AsSplitQuery()
+                //                            .Include(t => t.NextInput)
+                //                                .ThenInclude(t => t.SlpTransaction)
+                //                            .Where(t => t.NextInputId != null && !t.NextInput.SlpTransaction.BlockHeight.HasValue);
+                //foreach (var ocl in outputsClearLinks)
+                //{
+                //    ocl.NextInput = null;
+                //    ocl.NextInputId = null;
+                //}
 
                 _log.LogInformation("Deleting all unconfirmed inputs...");
                 var lastBlockTxInputs = db.SlpTransactionInput
-                    //.AsNoTracking()
                     .Include(t => t.SlpTransaction)
                     .Where(t => !t.SlpTransaction.BlockHeight.HasValue);
                 db.RemoveRange(lastBlockTxInputs);
@@ -518,7 +519,8 @@ namespace Slp.Indexer.Services
                 _log.LogInformation("Deleting all unconfirmed outputs...");
                 var lastBlockTxOutputs = db.SlpTransactionOutput
                     //.AsNoTracking()
-                    .Include(t => t.SlpTransaction).Where(t => !t.SlpTransaction.BlockHeight.HasValue);
+                    .Include(t => t.SlpTransaction)
+                    .Where(t => !t.SlpTransaction.BlockHeight.HasValue);
                 db.RemoveRange(lastBlockTxOutputs);
                 //await lastBlockTxOutputs.BatchDeleteAsync();
 
@@ -733,10 +735,13 @@ namespace Slp.Indexer.Services
                             if (!slpTr.TokenInputSum.HasValue)
                                 slpTr.TokenInputSum = 0;
                             slpTr.TokenInputSum += input.SlpAmount;
-                            //link from output to input where output was spent ( if spent )
+                            //link from output to input where output was spent ( if spent ) 
+                            //make a link in memory but do not store it in database
                             output.NextInput = input;
                             output.NextInputId = input.Id;
-                            db.Entry(output).State = EntityState.Modified;
+                            
+                            //do not do this here - it is very costly to fix this at every block
+                            //db.Entry(output).State = EntityState.Modified;
                         }
                         catch (Exception e)
                         {
